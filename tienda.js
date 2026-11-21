@@ -21,7 +21,7 @@ export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const esc = (t = "") => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const pesos = n => "$" + Math.round(Number(n) || 0).toLocaleString("es-CO");
 export const slug = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-export const waUrl = texto => `https://wa.me/${NEGOCIO.whatsapp}?text=${encodeURIComponent(texto)}`;
+export const waUrl = texto => `https://api.whatsapp.com/send?phone=${NEGOCIO.whatsapp}&text=${encodeURIComponent(texto)}`;
 
 // ---------- Íconos ----------
 export const ICO = {
