@@ -11,7 +11,7 @@ const AJUSTES_BASE = {
   anuncio: "Domicilio por solo $3.000 · o recoge tu detalle en la tienda",
   costoDomicilio: 3000,
   direccion: "",
-  horario: "",
+  horario: "Lunes a sábado, 8:00 a.m. a 6:00 p.m.",
   zonaDomicilio: "",
   categorias: ["Desayunos sorpresa", "Anchetas", "Arreglos y flores", "Cajas sorpresa", "Globos", "Personalizados"],
 };
