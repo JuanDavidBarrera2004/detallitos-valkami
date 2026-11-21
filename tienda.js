@@ -222,8 +222,10 @@ function enviarPedido(e) {
   const v = n => (f.elements[n]?.value || "").trim();
   const dom = entrega === "domicilio";
   const l = Carrito.leer(), sub = Carrito.subtotal(), env = costoEnvio(aj);
+  const numero = "VK-" + Array.from(crypto.getRandomValues(new Uint8Array(5)), x => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[x % 32]).join("");
   const lineas = [
-    `✨ *Nuevo pedido — ${NEGOCIO.nombre}* ✨`, "",
+    `✨ *Nuevo pedido — ${NEGOCIO.nombre}* ✨`,
+    `*Pedido:* ${numero}`, "",
     "*Productos:*",
     ...l.map(i => `• ${i.cant} × ${i.nombre}${i.opcion ? " (" + i.opcion + ")" : ""} — ${pesos(i.precio * i.cant)}`), "",
     `Subtotal: ${pesos(sub)}`,
@@ -244,6 +246,15 @@ function enviarPedido(e) {
   lineas.push(`*Forma de pago:* ${v("pago")}`);
   if (v("notas")) lineas.push(`*Notas:* ${v("notas")}`);
   window.open(waUrl(lineas.join("\n")), "_blank", "noopener");
+  // Guarda una copia del pedido para el panel de administración
+  if (!VISTA_PREVIA) {
+    const datos = { numero, entrega, items: l.map(i => ({ id: i.id, nombre: i.nombre, opcion: i.opcion, cant: i.cant })) };
+    ["nombre", "celular", "direccion", "barrio", "indicaciones", "destinatario", "celDest", "fecha", "hora", "mensaje", "pago", "notas"].forEach(k => datos[k] = v(k));
+    datos.sorpresa = !!f.elements.sorpresa?.checked;
+    try { fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos), keepalive: true }).catch(() => {}); } catch {}
+  }
+  Carrito.vaciar();
+  f.reset();
   cerrarPedido();
   aviso("¡Listo! Termina de enviar tu pedido en WhatsApp");
 }

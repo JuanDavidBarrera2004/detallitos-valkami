@@ -55,6 +55,23 @@ body{background:var(--crema)}
 .marcas input{width:18px!important;height:18px;accent-color:var(--morado)}
 .estado{font-size:13px;color:var(--gris)}
 .alerta{background:#fff7e6;border:1px solid #f0d9a8;color:#7a5a1d;border-radius:14px;padding:14px 16px;font-size:14px;margin-bottom:18px}
+.ped{background:var(--blanco);border:1px solid var(--linea);border-radius:18px;padding:18px 20px;display:grid;gap:12px}
+.ped.nuevo{border-color:var(--oro);box-shadow:0 0 0 3px rgba(201,164,92,.15)}
+.ped-cab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.ped-cab h3{font-family:var(--sans);font-size:17px;font-weight:600}
+.ped-cab small{color:var(--gris);font-size:13px}
+.ped .tot{font-family:var(--serif);font-size:24px;color:var(--ciruela);font-weight:600}
+.ped-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14px}
+.ped-datos b{font-weight:600;color:#4b3f55}
+.ped ul{list-style:none;font-size:14px;border-top:1px dashed var(--linea);padding-top:10px;display:grid;gap:4px}
+.ped ul li{display:flex;justify-content:space-between;gap:10px}
+.ped-pie{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--linea);padding-top:12px}
+.ped-pie select{padding:9px 12px;border-radius:10px;border:1px solid var(--linea);background:var(--marfil)}
+.est{font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;font-weight:600}
+.est-nuevo{background:#f3ead6;color:#7a5a1d}.est-confirmado{background:#e6ddf3;color:#4b2470}.est-preparando{background:#fde7f0;color:#9b2c5f}
+.est-entregado{background:#e3f4e8;color:#1f6b3a}.est-cancelado{background:#eee;color:#777}
+.tab .cuenta{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--oro);color:var(--noche);font-size:11px;margin-left:6px}
+.tab .cuenta:empty{display:none}
 @media(max-width:640px){.fila-p{grid-template-columns:54px 1fr}.fila-p .bts{grid-column:1/-1}.fila-p .bts .bt{flex:1}.caja-blanca{padding:20px}}
 </style>
 </head>
@@ -77,12 +94,19 @@ body{background:var(--crema)}
     <div style="display:flex;gap:18px"><a href="/" target="_blank">Ver tienda</a><button id="salir">Salir</button></div>
   </div></header>
   <div class="contenedor">
-    <div class="tabs"><button class="tab activo" data-tab="productos">Productos</button><button class="tab" data-tab="ajustes">Ajustes de la tienda</button></div>
+    <div class="tabs"><button class="tab activo" data-tab="productos">Productos</button><button class="tab" data-tab="pedidos">Pedidos<span class="cuenta" id="cuentaNuevos"></span></button><button class="tab" data-tab="ajustes">Ajustes de la tienda</button></div>
     <div id="alertaAlmacen" class="alerta oculto">Falta conectar el almacenamiento <b>TIENDA</b> en Cloudflare. Sin él no se pueden guardar productos.</div>
 
     <section id="tab-productos" style="padding:0">
       <div class="panel-cab"><h2>Productos <span class="estado" id="conteo"></span></h2><button class="btn btn-oro" id="nuevo">+ Nuevo producto</button></div>
       <div class="lista" id="lista"></div>
+    </section>
+
+    <section id="tab-pedidos" class="oculto" style="padding:0">
+      <div class="panel-cab"><h2>Pedidos <span class="estado" id="conteoPed"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="filtroPed" class="bt"><option value="">Todos</option><option value="nuevo">Nuevos</option><option value="confirmado">Confirmados</option><option value="preparando">En preparación</option><option value="entregado">Entregados</option><option value="cancelado">Cancelados</option></select><button class="bt" id="recargarPed">Actualizar</button></div></div>
+      <p class="estado" style="margin:-8px 0 16px">Aquí llegan los pedidos que los clientes envían por WhatsApp desde la página. Los nuevos pueden tardar hasta un minuto en aparecer.</p>
+      <div class="lista" id="listaPed"></div>
     </section>
 
     <section id="tab-ajustes" class="oculto" style="padding:0">
@@ -152,11 +176,12 @@ $("#salir").onclick = salir;
 async function entrar(d) {
   $("#acceso").classList.add("oculto"); $("#app").classList.remove("oculto");
   $("#alertaAlmacen").classList.toggle("oculto", d.almacen !== false);
-  await Promise.all([cargarProductos(), cargarAjustes()]);
+  await Promise.all([cargarProductos(), cargarAjustes(), cargarPedidos()]);
+  setInterval(() => { if (CLAVE) cargarPedidos().catch(() => {}); }, 60000);
 }
 if (CLAVE) api("/api/login", { method: "POST" }).then(entrar).catch(salir);
 
-$$(".tab").forEach(t => t.onclick = () => { $$(".tab").forEach(x => x.classList.toggle("activo", x === t)); $("#tab-productos").classList.toggle("oculto", t.dataset.tab !== "productos"); $("#tab-ajustes").classList.toggle("oculto", t.dataset.tab !== "ajustes"); });
+$$(".tab").forEach(t => t.onclick = () => { $$(".tab").forEach(x => x.classList.toggle("activo", x === t)); ["productos", "pedidos", "ajustes"].forEach(n => $("#tab-" + n).classList.toggle("oculto", t.dataset.tab !== n)); if (t.dataset.tab === "pedidos") cargarPedidos(); });
 
 // ---------- Fotos: se reducen en el navegador antes de subir ----------
 async function reducir(archivo, max = 1400) {
@@ -253,6 +278,61 @@ $("#formProd").onsubmit = async e => {
   catch (er) { $("#errProd").textContent = er.message; }
   $("#guardarProd").disabled = false;
 };
+
+// ---------- Pedidos ----------
+let pedidos = [];
+const NOM_EST = { nuevo: "Nuevo", confirmado: "Confirmado", preparando: "En preparación", entregado: "Entregado", cancelado: "Cancelado" };
+const fechaCO = iso => { if (!iso) return ""; const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" }); };
+const telWa = c => { let n = String(c || "").replace(/\D/g, ""); if (n.length === 10) n = "57" + n; return n; };
+async function cargarPedidos() {
+  try { pedidos = await api("/api/pedidos"); } catch (e) { $("#listaPed").innerHTML = `<div class="vacio">${esc(e.message)}</div>`; return; }
+  pintarPedidos();
+}
+function pintarPedidos() {
+  const fil = $("#filtroPed").value;
+  const l = pedidos.filter(p => !fil || p.estado === fil);
+  const nuevos = pedidos.filter(p => p.estado === "nuevo").length;
+  $("#cuentaNuevos").textContent = nuevos || "";
+  $("#conteoPed").textContent = `(${pedidos.length})`;
+  $("#listaPed").innerHTML = l.length ? l.map(p => `<article class="ped ${p.estado === "nuevo" ? "nuevo" : ""}">
+    <div class="ped-cab">
+      <div><h3>${esc(p.numero)} · ${esc(p.nombre)} <span class="est est-${esc(p.estado)}">${esc(NOM_EST[p.estado] || p.estado)}</span></h3>
+        <small>Recibido ${new Date(p.creado).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</small></div>
+      <div class="tot">${pesos(p.total)}</div>
+    </div>
+    <div class="ped-datos">
+      <div><b>Entrega:</b> ${p.entrega === "domicilio" ? "🛵 Domicilio" : "🏬 Recoge en tienda"}</div>
+      <div><b>Fecha:</b> ${esc(fechaCO(p.fecha))}${p.hora ? " · " + esc(p.hora) : ""}</div>
+      <div><b>Celular:</b> <a href="https://api.whatsapp.com/send?phone=${telWa(p.celular)}" target="_blank" rel="noopener" style="text-decoration:underline">${esc(p.celular)}</a></div>
+      <div><b>Pago:</b> ${esc(p.pago || "")}</div>
+      ${p.entrega === "domicilio" ? `<div style="grid-column:1/-1"><b>Dirección:</b> ${esc(p.direccion)}${p.barrio ? ", barrio " + esc(p.barrio) : ""}${p.indicaciones ? " · " + esc(p.indicaciones) : ""}</div>` : ""}
+      ${p.destinatario ? `<div><b>Para:</b> ${esc(p.destinatario)}${p.celDest ? " (" + esc(p.celDest) + ")" : ""}</div>` : ""}
+      ${p.sorpresa ? `<div><b>🎁 Es sorpresa</b></div>` : ""}
+      ${p.mensaje ? `<div style="grid-column:1/-1"><b>💌 Tarjeta:</b> "${esc(p.mensaje)}"</div>` : ""}
+      ${p.notas ? `<div style="grid-column:1/-1"><b>Notas:</b> ${esc(p.notas)}</div>` : ""}
+    </div>
+    <ul>${p.items.map(i => `<li><span>${i.cant} × ${esc(i.nombre)}${i.opcion ? " (" + esc(i.opcion) + ")" : ""}</span><span>${pesos(i.subtotal)}</span></li>`).join("")}
+      <li><span>${p.entrega === "domicilio" ? "Domicilio" : "Recoger en tienda"}</span><span>${p.envio ? pesos(p.envio) : "Gratis"}</span></li></ul>
+    <div class="ped-pie">
+      <select data-estado="${esc(p.numero)}" aria-label="Estado del pedido">${Object.entries(NOM_EST).map(([k, n]) => `<option value="${k}"${k === p.estado ? " selected" : ""}>${n}</option>`).join("")}</select>
+      <a class="bt" href="https://api.whatsapp.com/send?phone=${telWa(p.celular)}&text=${encodeURIComponent("Hola " + p.nombre + ", te escribimos de Detallitos Valkami sobre tu pedido " + p.numero + " ✨")}" target="_blank" rel="noopener">Escribir al cliente</a>
+      <button class="bt rojo" data-borrar-ped="${esc(p.numero)}" style="margin-left:auto">Borrar</button>
+    </div>
+  </article>`).join("") : `<div class="vacio">${fil ? "No hay pedidos con ese estado." : "Todavía no han llegado pedidos desde la página."}</div>`;
+}
+$("#filtroPed").onchange = pintarPedidos;
+$("#recargarPed").onclick = () => cargarPedidos();
+$("#listaPed").addEventListener("change", async e => {
+  const s = e.target.closest("[data-estado]"); if (!s) return;
+  try { const p = await api("/api/pedidos", { method: "PUT", body: JSON.stringify({ numero: s.dataset.estado, estado: s.value }) }); pedidos = pedidos.map(x => x.numero === p.numero ? p : x); pintarPedidos(); aviso("Estado actualizado"); }
+  catch (er) { aviso(er.message); }
+});
+$("#listaPed").addEventListener("click", async e => {
+  const b = e.target.closest("[data-borrar-ped]"); if (!b) return;
+  if (!confirm(`¿Borrar el pedido ${b.dataset.borrarPed}? Esto no se puede deshacer.`)) return;
+  try { await api("/api/pedidos?numero=" + encodeURIComponent(b.dataset.borrarPed), { method: "DELETE" }); pedidos = pedidos.filter(x => x.numero !== b.dataset.borrarPed); pintarPedidos(); aviso("Pedido borrado"); }
+  catch (er) { aviso(er.message); }
+});
 
 // ---------- Ajustes ----------
 async function cargarAjustes() {
