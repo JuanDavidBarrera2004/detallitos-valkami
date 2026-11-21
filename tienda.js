@@ -183,6 +183,11 @@ export function aviso(texto) {
 
 // ---------- Pedido ----------
 function hoyISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+function horaBonita(h) {
+  if (!/^\d{1,2}:\d{2}/.test(h || "")) return h || "";
+  let [hh, mm] = h.split(":").map(Number); const pm = hh >= 12; hh = hh % 12 || 12;
+  return `${hh}:${String(mm).padStart(2, "0")} ${pm ? "p. m." : "a. m."}`;
+}
 function fechaBonita(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-").map(Number);
@@ -200,6 +205,7 @@ function abrirPedido() {
   $$(".solo-rec", m).forEach(e => e.classList.toggle("oculto", dom));
   $$(".solo-dom input[data-req]", m).forEach(e => e.required = dom);
   $("#lblFecha").firstChild.textContent = dom ? "Fecha de entrega" : "Fecha en que lo recoges";
+  $("#fHora").parentElement.firstChild.textContent = dom ? "Hora de entrega" : "Hora en que lo recoges";
   $("#infoTienda").innerHTML = aj.direccion
     ? `${ICO.tienda}<span><b>Recoges en:</b> ${esc(aj.direccion)}${aj.horario ? `<br><small>${esc(aj.horario)}</small>` : ""}</span>`
     : `${ICO.tienda}<span>Te confirmamos por WhatsApp la dirección y la hora para recoger tu detalle.</span>`;
@@ -232,7 +238,7 @@ function enviarPedido(e) {
     dom ? `Domicilio: ${pesos(env)}` : "Recoger en tienda: Gratis",
     `*Total: ${pesos(sub + env)}*`, "",
     `*Entrega:* ${dom ? "🛵 Domicilio" : "🏬 Recoger en la tienda"}`,
-    `*Fecha:* ${fechaBonita(v("fecha"))}${v("hora") ? " · " + v("hora") : ""}`, "",
+    `*Fecha:* ${fechaBonita(v("fecha"))}${v("hora") ? " · " + horaBonita(v("hora")) : ""}`, "",
     `*Cliente:* ${v("nombre")}`,
     `*Celular:* ${v("celular")}`,
   ];
@@ -250,6 +256,7 @@ function enviarPedido(e) {
   if (!VISTA_PREVIA) {
     const datos = { numero, entrega, items: l.map(i => ({ id: i.id, nombre: i.nombre, opcion: i.opcion, cant: i.cant })) };
     ["nombre", "celular", "direccion", "barrio", "indicaciones", "destinatario", "celDest", "fecha", "hora", "mensaje", "pago", "notas"].forEach(k => datos[k] = v(k));
+    datos.hora = horaBonita(v("hora"));
     datos.sorpresa = !!f.elements.sorpresa?.checked;
     try { fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos), keepalive: true }).catch(() => {}); } catch {}
   }
@@ -297,7 +304,7 @@ function montarComunes() {
         <label class="solo-dom">Celular de quien recibe<input name="celDest" inputmode="tel" placeholder="Opcional"></label>
         <label class="ancho solo-dom" style="flex-direction:row;align-items:center;gap:10px;font-weight:400"><input type="checkbox" name="sorpresa" style="width:18px;height:18px;accent-color:var(--morado)"> Es una sorpresa (no avisar a quien recibe)</label>
         <label id="lblFecha">Fecha de entrega<input type="date" name="fecha" id="fFecha" required></label>
-        <label>Hora aproximada<select name="hora"><option value="">Cualquier hora</option><option>En la mañana</option><option>Al mediodía</option><option>En la tarde</option><option>En la noche</option></select></label>
+        <label>Hora de entrega<input type="time" name="hora" id="fHora" min="08:00" max="18:00" step="900"><span class="nota">Entre 8:00 a.m. y 6:00 p.m. Déjala vacía si no importa la hora.</span></label>
         <label class="ancho">Mensaje para la tarjeta <span class="nota">Opcional — lo escribimos con mucho cariño</span><textarea name="mensaje" maxlength="400" placeholder="Feliz cumpleaños, mi amor…"></textarea></label>
         <label>Forma de pago<select name="pago" required><option>Transferencia (Nequi, Daviplata o banco)</option><option>Efectivo</option></select></label>
         <label>Notas<input name="notas" placeholder="Colores, gustos, alergias…"></label>

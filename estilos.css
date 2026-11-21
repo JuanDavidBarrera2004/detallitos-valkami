@@ -81,7 +81,22 @@ h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.08;letter-spacin
 .hero-arte .aro{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(230,205,143,.5)}
 .hero-arte .aro.dos{inset:-22px;border-style:dashed;border-color:rgba(230,205,143,.25);animation:gira 60s linear infinite}
 .hero-arte .disco{position:absolute;inset:26px;border-radius:50%;overflow:hidden;background:var(--marfil);box-shadow:0 40px 90px -30px #000,0 0 0 8px rgba(255,255,255,.05)}
-.hero-arte .disco img{width:100%;height:100%;object-fit:cover}
+.hero-arte .disco img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+button.disco{cursor:pointer;border:0;padding:0;transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}
+button.disco:hover,button.disco:focus-visible{transform:scale(1.03);box-shadow:0 40px 90px -30px #000,0 0 0 8px rgba(230,205,143,.25),0 0 60px rgba(201,164,92,.35)}
+button.disco:focus-visible{outline:2px solid var(--oro2);outline-offset:6px}
+.hero-arte.abierto button.disco{transform:scale(.94)}
+.hero-arte .toca{position:absolute;left:0;right:0;bottom:-46px;text-align:center;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--oro2);opacity:.85;animation:latir 2.4s ease-in-out infinite;pointer-events:none}
+.hero-arte.abierto .toca{opacity:0;animation:none}
+@keyframes latir{0%,100%{opacity:.45}50%{opacity:1}}
+.logo-redes a{position:absolute;z-index:3;display:flex;align-items:center;gap:10px;padding:14px 22px 14px 16px;border-radius:999px;color:#fff;font-size:14px;font-weight:500;letter-spacing:.06em;box-shadow:0 18px 40px -14px rgba(0,0,0,.6);opacity:0;pointer-events:none;transform:scale(.4);transition:opacity .35s,transform .45s cubic-bezier(.2,1.4,.4,1)}
+.logo-redes a svg{width:24px;height:24px}
+.logo-redes .red-ig{left:-6%;bottom:16%;background:linear-gradient(45deg,#f9a03f,#e1306c 45%,#833ab4)}
+.logo-redes .red-wa{right:-6%;top:14%;background:#25d366}
+.hero-arte.abierto .logo-redes a{opacity:1;pointer-events:auto;transform:none}
+.hero-arte.abierto .logo-redes .red-wa{transition-delay:.06s}
+@media(max-width:900px){.logo-redes .red-ig{left:0;bottom:8%}.logo-redes .red-wa{right:0;top:8%}.logo-redes a{padding:12px 18px 12px 14px;font-size:13px}}
+.logo-redes a:hover{filter:brightness(1.08);transform:translateY(-2px)!important}
 .hero-arte .etiqueta{position:absolute;background:var(--marfil);color:var(--tinta);border-radius:16px;padding:14px 18px;box-shadow:var(--sombra);font-size:13px;line-height:1.35}
 .hero-arte .etiqueta b{display:block;font-family:var(--serif);font-size:22px;color:var(--ciruela)}
 .hero-arte .e1{left:-14px;bottom:14%}
