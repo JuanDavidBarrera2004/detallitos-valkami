@@ -70,6 +70,16 @@ body{background:var(--crema)}
 .est{font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;font-weight:600}
 .est-nuevo{background:#f3ead6;color:#7a5a1d}.est-confirmado{background:#e6ddf3;color:#4b2470}.est-preparando{background:#fde7f0;color:#9b2c5f}
 .est-entregado{background:#e3f4e8;color:#1f6b3a}.est-cancelado{background:#eee;color:#777}
+.filtros-p{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filtros-p .buscar{position:relative;flex:1;min-width:220px;max-width:360px}
+.filtros-p .buscar input{width:100%;padding:11px 16px 11px 40px;border-radius:999px;border:1px solid var(--linea);background:var(--blanco);outline:none;font-size:15px}
+.filtros-p .buscar input:focus{border-color:var(--oro)}
+.filtros-p .buscar svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--gris)}
+.chips-p{display:flex;gap:8px;flex-wrap:wrap}
+.chips-p .chip small{opacity:.65;margin-left:4px}
+.grupo-cat{font-family:var(--serif);font-size:24px;color:var(--ciruela);margin:14px 0 2px;display:flex;align-items:baseline;gap:8px}
+.grupo-cat small{font-family:var(--sans);font-size:13px;color:var(--gris)}
+@media(max-width:640px){.chips-p{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.chips-p .chip{flex:none}}
 .tab .cuenta{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--oro);color:var(--noche);font-size:11px;margin-left:6px}
 .tab .cuenta:empty{display:none}
 @media(max-width:640px){.fila-p{grid-template-columns:54px 1fr}.fila-p .bts{grid-column:1/-1}.fila-p .bts .bt{flex:1}.caja-blanca{padding:20px}}
@@ -99,6 +109,10 @@ body{background:var(--crema)}
 
     <section id="tab-productos" style="padding:0">
       <div class="panel-cab"><h2>Productos <span class="estado" id="conteo"></span></h2><button class="btn btn-oro" id="nuevo">+ Nuevo producto</button></div>
+      <div class="filtros-p">
+        <label class="buscar"><span class="sr">Buscar producto</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="buscarProd" type="search" placeholder="Buscar producto…"></label>
+        <div class="chips-p" id="chipsProd"></div>
+      </div>
       <div class="lista" id="lista"></div>
     </section>
 
@@ -204,15 +218,34 @@ async function cargarProductos() {
   productos = (await api("/api/productos?todos=1")).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
   pintarLista();
 }
-function pintarLista() {
-  $("#conteo").textContent = `(${productos.length})`;
-  $("#lista").innerHTML = productos.length ? productos.map(p => `<div class="fila-p">
+let catFiltro = "";
+const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function pintarChips() {
+  const cats = [...new Set([...(ajustes?.categorias || []), ...productos.map(p => p.categoria).filter(Boolean)])];
+  if (catFiltro && !cats.includes(catFiltro)) catFiltro = "";
+  $("#chipsProd").innerHTML = [["", "Todas", productos.length], ...cats.map(c => [c, c, productos.filter(p => p.categoria === c).length])]
+    .map(([v, n, k]) => `<button class="chip${v === catFiltro ? " activo" : ""}" data-cat="${esc(v)}">${esc(n)}<small>${k}</small></button>`).join("");
+}
+function filaProd(p) { return `<div class="fila-p">
     <div class="mini">${p.imagenes?.[0] ? `<img src="${esc(p.imagenes[0])}" alt="">` : arte(p.categoria)}</div>
     <div><h3>${esc(p.nombre)}</h3><div class="meta"><span>${esc(p.categoria || "Sin categoría")}</span><span>${pesos(p.precio)}</span>
       ${p.visible === false ? '<span class="pill no">Oculto</span>' : ""}${p.destacado ? '<span class="pill si">Favorito</span>' : ""}${p.agotado ? '<span class="pill no">Agotado</span>' : ""}</div></div>
     <div class="bts"><button class="bt" data-ed="${esc(p.id)}">Editar</button><button class="bt" data-vis="${esc(p.id)}">${p.visible === false ? "Mostrar" : "Ocultar"}</button><button class="bt rojo" data-del="${esc(p.id)}">Borrar</button></div>
-  </div>`).join("") : `<div class="vacio">Todavía no hay productos. Pulsa <b>+ Nuevo producto</b> para subir el primero.</div>`;
+  </div>`; }
+function pintarLista() {
+  $("#conteo").textContent = `(${productos.length})`;
+  pintarChips();
+  if (!productos.length) { $("#lista").innerHTML = `<div class="vacio">Todavía no hay productos. Pulsa <b>+ Nuevo producto</b> para subir el primero.</div>`; return; }
+  const q = norm($("#buscarProd").value.trim());
+  const l = productos.filter(p => (!catFiltro || p.categoria === catFiltro) && (!q || norm(p.nombre + " " + p.categoria + " " + (p.descripcion || "")).includes(q)));
+  if (!l.length) { $("#lista").innerHTML = `<div class="vacio">No hay productos que coincidan${q ? " con «" + esc($("#buscarProd").value.trim()) + "»" : " en esta categoría"}.</div>`; return; }
+  if (catFiltro) { $("#lista").innerHTML = l.map(filaProd).join(""); return; }
+  // Todas: agrupados por categoría, en el orden de los ajustes
+  const orden = [...new Set([...(ajustes?.categorias || []), ...l.map(p => p.categoria || "Sin categoría")])];
+  $("#lista").innerHTML = orden.map(c => { const g = l.filter(p => (p.categoria || "Sin categoría") === c); return g.length ? `<h3 class="grupo-cat">${esc(c)} <small>${g.length} ${g.length === 1 ? "producto" : "productos"}</small></h3>` + g.map(filaProd).join("") : ""; }).join("");
 }
+$("#buscarProd").addEventListener("input", pintarLista);
+$("#chipsProd").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (!b) return; catFiltro = b.dataset.cat; pintarLista(); });
 $("#lista").onclick = async e => {
   const b = e.target.closest("button"); if (!b) return;
   const p = productos.find(x => x.id === (b.dataset.ed || b.dataset.vis || b.dataset.del));
@@ -341,6 +374,7 @@ async function cargarAjustes() {
   ["anuncio", "costoDomicilio", "direccion", "horario", "zonaDomicilio"].forEach(k => f[k].value = ajustes[k] ?? "");
   f.categorias.value = (ajustes.categorias || []).join("\n");
   portada = ajustes.imagenPortada || ""; pintarPortada();
+  if (productos.length) pintarLista();
 }
 function pintarPortada() {
   $("#fotoPortada").innerHTML = (portada ? `<div class="foto-a"><img src="${esc(portada)}" alt=""><button type="button" class="q" id="qPortada" aria-label="Quitar">×</button></div>` : "")
