@@ -96,6 +96,37 @@ export async function productos() {
   _productos = _productos.filter(p => p.visible !== false).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
   return _productos;
 }
+let _entregas;
+export async function entregas() {
+  if (_entregas) return _entregas;
+  try { _entregas = await api("/api/entregas"); } catch { _entregas = []; }
+  return _entregas;
+}
+export function pintarGaleria(el, lista) {
+  if (!lista.length) { el.innerHTML = `<div class="vacio">Muy pronto verás aquí fotos de nuestros pedidos entregados.</div>`; return; }
+  el.innerHTML = lista.map((e, i) => `<button class="foto-ent aparece" data-i="${i}" aria-label="Ver foto${e.texto ? ": " + esc(e.texto) : ""}">
+    <img src="${esc(e.imagen)}" alt="${esc(e.texto || "Pedido entregado por Detallitos Valkami")}" loading="lazy">
+    ${e.texto ? `<span>${esc(e.texto)}</span>` : ""}</button>`).join("");
+  el.onclick = ev => { const b = ev.target.closest(".foto-ent"); if (b) verFoto(lista, +b.dataset.i); };
+  observar();
+}
+function verFoto(lista, i) {
+  let v = $("#visor");
+  if (!v) {
+    document.body.insertAdjacentHTML("beforeend", `<div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Foto de pedido entregado">
+      <button class="cerrar v-cerrar" aria-label="Cerrar">${ICO.x}</button><button class="v-nav v-ant" aria-label="Anterior">‹</button>
+      <figure><img alt=""><figcaption></figcaption></figure><button class="v-nav v-sig" aria-label="Siguiente">›</button></div>`);
+    v = $("#visor");
+    v.onclick = e => { if (e.target === v || e.target.closest(".v-cerrar")) cerrarVisor(); };
+    document.addEventListener("keydown", e => { if (!v.classList.contains("abierto")) return; if (e.key === "Escape") cerrarVisor(); if (e.key === "ArrowRight") v._mover(1); if (e.key === "ArrowLeft") v._mover(-1); });
+  }
+  const pintar = () => { const e = lista[v._i]; $("img", v).src = e.imagen; $("img", v).alt = e.texto || "Pedido entregado"; $("figcaption", v).textContent = e.texto || ""; };
+  v._i = i; v._mover = d => { v._i = (v._i + d + lista.length) % lista.length; pintar(); };
+  $(".v-ant", v).onclick = () => v._mover(-1); $(".v-sig", v).onclick = () => v._mover(1);
+  $$(".v-nav", v).forEach(b => b.style.display = lista.length > 1 ? "" : "none");
+  pintar(); v.classList.add("abierto"); document.body.style.overflow = "hidden";
+}
+function cerrarVisor() { $("#visor")?.classList.remove("abierto"); document.body.style.overflow = ""; }
 export const precioDe = p => (p.opciones && p.opciones.length ? Math.min(...p.opciones.map(o => Number(o.precio) || 0)) : Number(p.precio) || 0);
 
 // ---------- Tarjetas ----------

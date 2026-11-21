@@ -80,6 +80,17 @@ body{background:var(--crema)}
 .grupo-cat{font-family:var(--serif);font-size:24px;color:var(--ciruela);margin:14px 0 2px;display:flex;align-items:baseline;gap:8px}
 .grupo-cat small{font-family:var(--sans);font-size:13px;color:var(--gris)}
 @media(max-width:640px){.chips-p{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.chips-p .chip{flex:none}}
+.ent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;padding-bottom:80px}
+.ent{background:var(--blanco);border:1px solid var(--linea);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.ent.oculta{opacity:.55}
+.ent img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--crema)}
+.ent .cuerpo{padding:10px;display:grid;gap:8px}
+.ent input{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--linea);font-size:13px;outline:none}
+.ent input:focus{border-color:var(--oro)}
+.ent .bts{display:flex;gap:6px}.ent .bts .bt{flex:1;padding:8px 6px;font-size:12px}
+.subir-ent{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--blanco);border:1px dashed var(--oro);border-radius:18px;padding:18px;margin-bottom:18px}
+.subir-ent label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;flex:1;min-width:220px}
+.subir-ent input[type=text]{padding:12px 14px;border-radius:12px;border:1px solid var(--linea);font-size:15px;outline:none}
 .tab .cuenta{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--oro);color:var(--noche);font-size:11px;margin-left:6px}
 .tab .cuenta:empty{display:none}
 @media(max-width:640px){.fila-p{grid-template-columns:54px 1fr}.fila-p .bts{grid-column:1/-1}.fila-p .bts .bt{flex:1}.caja-blanca{padding:20px}}
@@ -104,7 +115,7 @@ body{background:var(--crema)}
     <div style="display:flex;gap:18px"><a href="/" target="_blank">Ver tienda</a><button id="salir">Salir</button></div>
   </div></header>
   <div class="contenedor">
-    <div class="tabs"><button class="tab activo" data-tab="productos">Productos</button><button class="tab" data-tab="pedidos">Pedidos<span class="cuenta" id="cuentaNuevos"></span></button><button class="tab" data-tab="ajustes">Ajustes de la tienda</button></div>
+    <div class="tabs"><button class="tab activo" data-tab="productos">Productos</button><button class="tab" data-tab="pedidos">Pedidos<span class="cuenta" id="cuentaNuevos"></span></button><button class="tab" data-tab="entregados">Entregados</button><button class="tab" data-tab="ajustes">Ajustes de la tienda</button></div>
     <div id="alertaAlmacen" class="alerta oculto">Falta conectar el almacenamiento <b>TIENDA</b> en Cloudflare. Sin él no se pueden guardar productos.</div>
 
     <section id="tab-productos" style="padding:0">
@@ -121,6 +132,17 @@ body{background:var(--crema)}
         <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="filtroPed" class="bt"><option value="">Todos</option><option value="nuevo">Nuevos</option><option value="confirmado">Confirmados</option><option value="preparando">En preparación</option><option value="entregado">Entregados</option><option value="cancelado">Cancelados</option></select><button class="bt" id="recargarPed">Actualizar</button></div></div>
       <p class="estado" style="margin:-8px 0 16px">Aquí llegan los pedidos que los clientes envían por WhatsApp desde la página. Los nuevos pueden tardar hasta un minuto en aparecer.</p>
       <div class="lista" id="listaPed"></div>
+    </section>
+
+    <section id="tab-entregados" class="oculto" style="padding:0">
+      <div class="panel-cab"><h2>Pedidos entregados <span class="estado" id="conteoEnt"></span></h2><a class="bt" href="/entregados.html" target="_blank">Ver en la página</a></div>
+      <p class="estado" style="margin:-8px 0 16px">Las fotos que subas aquí salen en la página, en "Pedidos entregados". También puedes subirlas desde cada pedido con el botón "📷 Foto de entrega".</p>
+      <div class="subir-ent">
+        <label>Texto de la foto (opcional)<input type="text" id="textoEnt" maxlength="160" placeholder="Ej: Desayuno sorpresa de cumpleaños"></label>
+        <label class="btn btn-oro" style="flex:none;min-width:0;cursor:pointer">+ Subir fotos<input type="file" accept="image/*" multiple hidden id="inEnt"></label>
+      </div>
+      <p class="error" id="errEnt"></p>
+      <div class="ent-grid" id="listaEnt"></div>
     </section>
 
     <section id="tab-ajustes" class="oculto" style="padding:0">
@@ -195,7 +217,7 @@ async function entrar(d) {
 }
 if (CLAVE) api("/api/login", { method: "POST" }).then(entrar).catch(salir);
 
-$$(".tab").forEach(t => t.onclick = () => { $$(".tab").forEach(x => x.classList.toggle("activo", x === t)); ["productos", "pedidos", "ajustes"].forEach(n => $("#tab-" + n).classList.toggle("oculto", t.dataset.tab !== n)); if (t.dataset.tab === "pedidos") cargarPedidos(); });
+$$(".tab").forEach(t => t.onclick = () => { $$(".tab").forEach(x => x.classList.toggle("activo", x === t)); ["productos", "pedidos", "entregados", "ajustes"].forEach(n => $("#tab-" + n).classList.toggle("oculto", t.dataset.tab !== n)); if (t.dataset.tab === "pedidos") cargarPedidos(); if (t.dataset.tab === "entregados") cargarEntregas(); });
 
 // ---------- Fotos: se reducen en el navegador antes de subir ----------
 async function reducir(archivo, max = 1400) {
@@ -348,6 +370,7 @@ function pintarPedidos() {
       <li><span>${p.entrega === "domicilio" ? "Domicilio" : "Recoger en tienda"}</span><span>${p.envio ? pesos(p.envio) : "Gratis"}</span></li></ul>
     <div class="ped-pie">
       <select data-estado="${esc(p.numero)}" aria-label="Estado del pedido">${Object.entries(NOM_EST).map(([k, n]) => `<option value="${k}"${k === p.estado ? " selected" : ""}>${n}</option>`).join("")}</select>
+      <label class="bt" style="cursor:pointer">📷 Foto de entrega<input type="file" accept="image/*" hidden data-foto-ped="${esc(p.numero)}"></label>
       <a class="bt" href="https://api.whatsapp.com/send?phone=${telWa(p.celular)}&text=${encodeURIComponent("Hola " + p.nombre + ", te escribimos de Detallitos Valkami sobre tu pedido " + p.numero + " ✨")}" target="_blank" rel="noopener">Escribir al cliente</a>
       <button class="bt rojo" data-borrar-ped="${esc(p.numero)}" style="margin-left:auto">Borrar</button>
     </div>
@@ -356,6 +379,20 @@ function pintarPedidos() {
 $("#filtroPed").onchange = pintarPedidos;
 $("#recargarPed").onclick = () => cargarPedidos();
 $("#listaPed").addEventListener("change", async e => {
+  const fi = e.target.closest("[data-foto-ped]");
+  if (fi) {
+    const a = fi.files[0]; if (!a) return;
+    const p = pedidos.find(x => x.numero === fi.dataset.fotoPed);
+    const lab = fi.parentElement; lab.firstChild.textContent = "Subiendo… ";
+    try {
+      const url = await subir(a);
+      const texto = (p?.items || []).map(i => i.nombre).join(" + ");
+      await api("/api/entregas", { method: "POST", body: JSON.stringify({ imagen: url, texto, pedido: p?.numero }) });
+      if (p && p.estado !== "entregado") { const q = await api("/api/pedidos", { method: "PUT", body: JSON.stringify({ numero: p.numero, estado: "entregado" }) }); pedidos = pedidos.map(x => x.numero === q.numero ? q : x); }
+      pintarPedidos(); aviso("Foto subida a Pedidos entregados"); entregasCargadas = false;
+    } catch (er) { lab.firstChild.textContent = "📷 Foto de entrega"; aviso(er.message); }
+    return;
+  }
   const s = e.target.closest("[data-estado]"); if (!s) return;
   try { const p = await api("/api/pedidos", { method: "PUT", body: JSON.stringify({ numero: s.dataset.estado, estado: s.value }) }); pedidos = pedidos.map(x => x.numero === p.numero ? p : x); pintarPedidos(); aviso("Estado actualizado"); }
   catch (er) { aviso(er.message); }
@@ -365,6 +402,38 @@ $("#listaPed").addEventListener("click", async e => {
   if (!confirm(`¿Borrar el pedido ${b.dataset.borrarPed}? Esto no se puede deshacer.`)) return;
   try { await api("/api/pedidos?numero=" + encodeURIComponent(b.dataset.borrarPed), { method: "DELETE" }); pedidos = pedidos.filter(x => x.numero !== b.dataset.borrarPed); pintarPedidos(); aviso("Pedido borrado"); }
   catch (er) { aviso(er.message); }
+});
+
+// ---------- Entregados ----------
+let entregasL = [], entregasCargadas = false;
+async function cargarEntregas() {
+  try { entregasL = await api("/api/entregas?todos=1"); entregasCargadas = true; } catch (e) { $("#errEnt").textContent = e.message; return; }
+  pintarEntregas();
+}
+function pintarEntregas() {
+  $("#conteoEnt").textContent = `(${entregasL.length})`;
+  $("#listaEnt").innerHTML = entregasL.length ? entregasL.map(e => `<div class="ent${e.visible === false ? " oculta" : ""}">
+    <img src="${esc(e.imagen)}" alt="" loading="lazy">
+    <div class="cuerpo"><input value="${esc(e.texto || "")}" placeholder="Texto de la foto" data-texto-ent="${esc(e.id)}" maxlength="160">
+      <div class="bts"><button class="bt" data-vis-ent="${esc(e.id)}">${e.visible === false ? "Mostrar" : "Ocultar"}</button><button class="bt rojo" data-del-ent="${esc(e.id)}">Borrar</button></div></div>
+  </div>`).join("") : `<div class="vacio" style="grid-column:1/-1">Todavía no hay fotos. Pulsa <b>+ Subir fotos</b> para agregar la primera.</div>`;
+}
+$("#inEnt").onchange = async e => {
+  const fs = [...e.target.files]; if (!fs.length) return;
+  $("#errEnt").textContent = "Subiendo fotos…";
+  try { for (const a of fs) { const url = await subir(a); await api("/api/entregas", { method: "POST", body: JSON.stringify({ imagen: url, texto: $("#textoEnt").value }) }); }
+    $("#errEnt").textContent = ""; $("#textoEnt").value = ""; aviso(fs.length > 1 ? "Fotos subidas" : "Foto subida"); await cargarEntregas(); }
+  catch (er) { $("#errEnt").textContent = er.message; }
+  e.target.value = "";
+};
+$("#listaEnt").addEventListener("change", async e => {
+  const i = e.target.closest("[data-texto-ent]"); if (!i) return;
+  try { await api("/api/entregas", { method: "POST", body: JSON.stringify({ id: i.dataset.textoEnt, texto: i.value }) }); aviso("Texto guardado"); } catch (er) { aviso(er.message); }
+});
+$("#listaEnt").addEventListener("click", async e => {
+  const v = e.target.closest("[data-vis-ent]"), d = e.target.closest("[data-del-ent]");
+  if (v) { const x = entregasL.find(y => y.id === v.dataset.visEnt); try { await api("/api/entregas", { method: "POST", body: JSON.stringify({ id: x.id, visible: x.visible === false }) }); await cargarEntregas(); } catch (er) { aviso(er.message); } }
+  if (d && confirm("¿Borrar esta foto de la galería?")) { try { await api("/api/entregas?id=" + encodeURIComponent(d.dataset.delEnt), { method: "DELETE" }); await cargarEntregas(); aviso("Foto borrada"); } catch (er) { aviso(er.message); } }
 });
 
 // ---------- Ajustes ----------
