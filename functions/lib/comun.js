@@ -57,6 +57,9 @@ export const AJUSTES_BASE = {
   horario: "Lunes a sábado, 8:00 a.m. a 6:00 p.m.",
   zonaDomicilio: "",
   imagenPortada: "",
+  nequi: "",
+  nequiTitular: "",
+  transferencia: "",
   categorias: ["Desayunos sorpresa", "Anchetas", "Arreglos y flores", "Cajas sorpresa", "Globos", "Personalizados"],
 };
 export function limpiarAjustes(a) {
@@ -69,6 +72,9 @@ export function limpiarAjustes(a) {
     horario: texto(a.horario, 200),
     zonaDomicilio: texto(a.zonaDomicilio, 200),
     imagenPortada: /^(\/api\/img\/|https:\/\/)/.test(img) ? img : "",
+    nequi: texto(a.nequi, 30),
+    nequiTitular: texto(a.nequiTitular, 80),
+    transferencia: String(a.transferencia ?? "").replace(/\r/g, "").trim().slice(0, 600),
     categorias: [...new Set(cats)].slice(0, 20).length ? [...new Set(cats)].slice(0, 20) : AJUSTES_BASE.categorias,
   };
 }
