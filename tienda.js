@@ -13,6 +13,9 @@ const AJUSTES_BASE = {
   direccion: "",
   horario: "Lunes a sábado, 8:00 a.m. a 6:00 p.m.",
   zonaDomicilio: "",
+  nequi: "",
+  nequiTitular: "",
+  transferencia: "",
   categorias: ["Desayunos sorpresa", "Anchetas", "Arreglos y flores", "Cajas sorpresa", "Globos", "Personalizados"],
 };
 
@@ -291,11 +294,35 @@ function enviarPedido(e) {
     datos.sorpresa = !!f.elements.sorpresa?.checked;
     try { fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos), keepalive: true }).catch(() => {}); } catch {}
   }
+  const pago = v("pago");
   Carrito.vaciar();
   f.reset();
   cerrarPedido();
-  aviso("¡Listo! Termina de enviar tu pedido en WhatsApp");
+  mostrarPago(numero, sub + env, pago, dom);
 }
+
+// ---------- Pago después del pedido ----------
+function mostrarPago(numero, total, pago, dom) {
+  const aj = _ajustes, m = $("#modalPago");
+  const efectivo = /efectivo/i.test(pago);
+  $("#pagoNum").textContent = numero;
+  $("#pagoTotal").textContent = pesos(total);
+  const bloques = [];
+  if (aj.nequi) bloques.push({ k: "Nequi", html: `<div class="pago-op${/nequi/i.test(pago) ? " sel" : ""}"><div class="pago-tit"><span class="pago-logo nequi">N</span><b>Nequi</b></div>
+      <div class="pago-dato"><span>${esc(aj.nequi)}</span><button type="button" class="copiar" data-copiar="${esc(aj.nequi.replace(/\s/g, ""))}">Copiar</button></div>
+      ${aj.nequiTitular ? `<small>A nombre de ${esc(aj.nequiTitular)}</small>` : ""}</div>` });
+  if (aj.transferencia) bloques.push({ k: "Transferencia", html: `<div class="pago-op${/transfer/i.test(pago) ? " sel" : ""}"><div class="pago-tit"><span class="pago-logo banco">${ICO.tienda}</span><b>Transferencia bancaria</b></div>
+      <div class="pago-dato multi"><span>${esc(aj.transferencia)}</span><button type="button" class="copiar" data-copiar="${esc(aj.transferencia)}">Copiar</button></div></div>` });
+  if (/transfer/i.test(pago)) bloques.reverse();
+  $("#pagoDatos").innerHTML = efectivo
+    ? `<div class="pago-op sel"><div class="pago-tit"><span class="pago-logo banco">$</span><b>Pago en efectivo</b></div><small>Pagas ${dom ? "cuando recibas tu detalle" : "cuando lo recojas en la tienda"}. Ten listo el valor exacto si puedes.</small></div>`
+    : bloques.length ? bloques.map(b => b.html).join("") : `<div class="pago-op"><small>En un momento te enviamos por WhatsApp los datos para pagar por Nequi o transferencia.</small></div>`;
+  $("#pagoPasos").classList.toggle("oculto", efectivo);
+  $("#btnSoporte").classList.toggle("oculto", efectivo);
+  $("#btnSoporte").href = waUrl(`Hola ${NEGOCIO.nombre} ✨ Te envío el comprobante de pago del pedido ${numero} por ${pesos(total)} (${pago}). 📎`);
+  m.classList.add("abierto"); document.body.style.overflow = "hidden";
+}
+function cerrarPago() { $("#modalPago").classList.remove("abierto"); document.body.style.overflow = ""; }
 
 // ---------- Estructura común (carrito + modal) ----------
 function montarComunes() {
@@ -337,12 +364,30 @@ function montarComunes() {
         <label id="lblFecha">Fecha de entrega<input type="date" name="fecha" id="fFecha" required></label>
         <label>Hora de entrega<input type="time" name="hora" id="fHora" min="08:00" max="18:00" step="900"><span class="nota">Entre 8:00 a.m. y 6:00 p.m. Déjala vacía si no importa la hora.</span></label>
         <label class="ancho">Mensaje para la tarjeta <span class="nota">Opcional — lo escribimos con mucho cariño</span><textarea name="mensaje" maxlength="400" placeholder="Feliz cumpleaños, mi amor…"></textarea></label>
-        <label>Forma de pago<select name="pago" required><option>Transferencia (Nequi, Daviplata o banco)</option><option>Efectivo</option></select></label>
+        <label>Forma de pago<select name="pago" required><option>Nequi</option><option>Transferencia bancaria</option><option>Efectivo</option></select></label>
         <label>Notas<input name="notas" placeholder="Colores, gustos, alergias…"></label>
         <div class="ancho resumen" id="resumen"></div>
         <p class="ancho error" id="errPedido" role="alert"></p>
         <button class="btn btn-oro btn-bloque ancho" type="submit">${ICO.wa} Enviar pedido por WhatsApp</button>
       </form>
+    </div>
+  </div>
+  <div class="modal" id="modalPago" role="dialog" aria-modal="true" aria-labelledby="tituloPago">
+    <div class="fondo" data-cerrar-pago></div>
+    <div class="caja-m" style="width:min(520px,100%)">
+      <button class="cerrar" data-cerrar-pago aria-label="Cerrar">${ICO.x}</button>
+      <div class="pago-ok">${ICO.check}</div>
+      <h3 id="tituloPago" style="text-align:center">¡Pedido enviado!</h3>
+      <p class="sub" style="text-align:center">Pedido <b id="pagoNum"></b> · Total a pagar</p>
+      <div class="pago-total" id="pagoTotal"></div>
+      <div id="pagoDatos" class="pago-datos"></div>
+      <ol class="pago-pasos" id="pagoPasos">
+        <li>Paga el total por Nequi o transferencia.</li>
+        <li>Toma una captura del comprobante.</li>
+        <li>Pulsa el botón y adjunta la captura en WhatsApp 📎</li>
+      </ol>
+      <a class="btn btn-wa btn-bloque" id="btnSoporte" target="_blank" rel="noopener">${ICO.wa.replace("<svg", '<svg class="ico"')} Enviar comprobante por WhatsApp</a>
+      <button class="btn btn-borde btn-bloque" data-cerrar-pago style="margin-top:10px">Listo</button>
     </div>
   </div>
   <a class="wa-flot" href="${waUrl("Hola Detallitos Valkami ✨ quiero hacer un pedido")}" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">${ICO.wa}</a>`;
@@ -354,6 +399,12 @@ function montarComunes() {
   $$('input[name="entrega"]').forEach(r => r.onchange = () => { entrega = r.value; try { localStorage.setItem("valkami_entrega", entrega); } catch {} pintarCarrito(); });
   try { const g = localStorage.getItem("valkami_entrega"); if (g === "recoger" || g === "domicilio") { entrega = g; $(`input[name="entrega"][value="${g}"]`).checked = true; } } catch {}
   $$("[data-cerrar-pedido]").forEach(b => b.onclick = cerrarPedido);
+  $$("[data-cerrar-pago]").forEach(b => b.onclick = cerrarPago);
+  $("#modalPago").addEventListener("click", async e => {
+    const b = e.target.closest("[data-copiar]"); if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copiar); } catch { const t = document.createElement("textarea"); t.value = b.dataset.copiar; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+    b.textContent = "¡Copiado!"; setTimeout(() => b.textContent = "Copiar", 1600);
+  });
   $("#formPedido").addEventListener("submit", enviarPedido);
   $("#formPedido").addEventListener("invalid", e => { $("#errPedido").textContent = "Revisa los campos marcados para continuar."; }, true);
   $("#cajonCuerpo").onclick = e => {
@@ -362,7 +413,7 @@ function montarComunes() {
     if (b.dataset.menos) Carrito.cambiar(b.dataset.menos, -1);
     if (b.dataset.quitar) Carrito.quitar(b.dataset.quitar);
   };
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { cerrarCarrito(); cerrarPedido(); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { cerrarCarrito(); cerrarPedido(); cerrarPago(); } });
 }
 
 // Animación suave al hacer scroll

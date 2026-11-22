@@ -166,6 +166,11 @@ body{background:var(--crema)}
         <label>Zona de domicilios<input name="zonaDomicilio" maxlength="200" placeholder="Ej: Domicilios en todo el casco urbano"></label>
         <label class="ancho">Dirección para recoger en la tienda<input name="direccion" maxlength="200" placeholder="Ej: Calle 10 # 5-20, barrio Centro"></label>
         <label class="ancho">Horario<input name="horario" maxlength="200" placeholder="Ej: Lunes a sábado 8:00 a.m. – 7:00 p.m."></label>
+        <h3 class="ancho" style="font-size:24px;color:var(--ciruela);margin-top:10px">Datos de pago</h3>
+        <p class="ancho estado" style="margin-top:-8px">Salen al cliente apenas envía su pedido, junto al botón para mandar el comprobante por WhatsApp. Si los dejas vacíos, se le dice que le enviarán los datos por WhatsApp.</p>
+        <label>Número Nequi<input name="nequi" maxlength="30" inputmode="numeric" autocomplete="off"></label>
+        <label>A nombre de (Nequi)<input name="nequiTitular" maxlength="80" autocomplete="off"></label>
+        <label class="ancho">Datos para transferencia<textarea name="transferencia" rows="4" maxlength="600" autocomplete="off" placeholder="Banco, tipo de cuenta, número y a nombre de quién"></textarea></label>
         <label class="ancho">Categorías (una por línea)<textarea name="categorias" rows="7"></textarea><span class="nota">Aparecen en el inicio como "ocasiones" y como filtros del catálogo.</span></label>
         <div class="ancho"><span style="font-size:13px;font-weight:500;color:#4b3f55">Foto de portada (círculo del inicio)</span><div class="fotos" id="fotoPortada" style="margin-top:8px"></div><span class="nota" style="font-size:12px;color:var(--gris)">Si no subes una, se muestra el logo.</span></div>
         <button class="btn btn-oro ancho" type="submit">Guardar ajustes</button>
@@ -482,7 +487,7 @@ $("#listaRes").addEventListener("click", async e => {
 async function cargarAjustes() {
   ajustes = await api("/api/ajustes");
   const f = $("#formAjustes");
-  ["anuncio", "costoDomicilio", "direccion", "horario", "zonaDomicilio"].forEach(k => f[k].value = ajustes[k] ?? "");
+  ["anuncio", "costoDomicilio", "direccion", "horario", "zonaDomicilio", "nequi", "nequiTitular", "transferencia"].forEach(k => f[k].value = ajustes[k] ?? "");
   f.categorias.value = (ajustes.categorias || []).join("\n");
   portada = ajustes.imagenPortada || ""; pintarPortada();
   if (productos.length) pintarLista();
@@ -495,7 +500,7 @@ function pintarPortada() {
 }
 $("#formAjustes").onsubmit = async e => {
   e.preventDefault(); const f = e.target;
-  const datos = { anuncio: f.anuncio.value, costoDomicilio: f.costoDomicilio.value, direccion: f.direccion.value, horario: f.horario.value, zonaDomicilio: f.zonaDomicilio.value, categorias: f.categorias.value, imagenPortada: portada };
+  const datos = { anuncio: f.anuncio.value, costoDomicilio: f.costoDomicilio.value, direccion: f.direccion.value, horario: f.horario.value, zonaDomicilio: f.zonaDomicilio.value, nequi: f.nequi.value, nequiTitular: f.nequiTitular.value, transferencia: f.transferencia.value, categorias: f.categorias.value, imagenPortada: portada };
   try { ajustes = await api("/api/ajustes", { method: "PUT", body: JSON.stringify(datos) }); aviso("Ajustes guardados"); } catch (er) { aviso(er.message); }
 };
 </script>
