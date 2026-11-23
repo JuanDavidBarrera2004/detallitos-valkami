@@ -305,10 +305,11 @@ function enviarPedido(e) {
 function mostrarPago(numero, total, pago, dom) {
   const aj = _ajustes, m = $("#modalPago");
   const efectivo = /efectivo/i.test(pago);
+  const esNequi = /nequi|daviplata/i.test(pago);
   $("#pagoNum").textContent = numero;
   $("#pagoTotal").textContent = pesos(total);
   const bloques = [];
-  if (aj.nequi) bloques.push({ k: "Nequi", html: `<div class="pago-op${/nequi/i.test(pago) ? " sel" : ""}"><div class="pago-tit"><span class="pago-logo nequi">N</span><b>Nequi</b></div>
+  if (aj.nequi) bloques.push({ k: "Nequi", html: `<div class="pago-op${esNequi ? " sel" : ""}"><div class="pago-tit"><span class="pago-logo nequi">N</span><b>Nequi / Daviplata</b></div>
       <div class="pago-dato"><span>${esc(aj.nequi)}</span><button type="button" class="copiar" data-copiar="${esc(aj.nequi.replace(/\s/g, ""))}">Copiar</button></div>
       ${aj.nequiTitular ? `<small>A nombre de ${esc(aj.nequiTitular)}</small>` : ""}</div>` });
   if (aj.transferencia) bloques.push({ k: "Transferencia", html: `<div class="pago-op${/transfer/i.test(pago) ? " sel" : ""}"><div class="pago-tit"><span class="pago-logo banco">${ICO.tienda}</span><b>Transferencia bancaria</b></div>
@@ -316,7 +317,7 @@ function mostrarPago(numero, total, pago, dom) {
   if (/transfer/i.test(pago)) bloques.reverse();
   $("#pagoDatos").innerHTML = efectivo
     ? `<div class="pago-op sel"><div class="pago-tit"><span class="pago-logo banco">$</span><b>Pago en efectivo</b></div><small>Pagas ${dom ? "cuando recibas tu detalle" : "cuando lo recojas en la tienda"}. Ten listo el valor exacto si puedes.</small></div>`
-    : bloques.length ? bloques.map(b => b.html).join("") : `<div class="pago-op"><small>En un momento te enviamos por WhatsApp los datos para pagar por Nequi o transferencia.</small></div>`;
+    : bloques.length ? bloques.map(b => b.html).join("") : `<div class="pago-op"><small>En un momento te enviamos por WhatsApp los datos para pagar por Nequi, Daviplata o transferencia.</small></div>`;
   $("#pagoPasos").classList.toggle("oculto", efectivo);
   $("#btnSoporte").classList.toggle("oculto", efectivo);
   $("#btnSoporte").href = waUrl(`Hola ${NEGOCIO.nombre} ✨ Te envío el comprobante de pago del pedido ${numero} por ${pesos(total)} (${pago}). 📎`);
@@ -364,7 +365,7 @@ function montarComunes() {
         <label id="lblFecha">Fecha de entrega<input type="date" name="fecha" id="fFecha" required></label>
         <label>Hora de entrega<input type="time" name="hora" id="fHora" min="08:00" max="18:00" step="900"><span class="nota">Entre 8:00 a.m. y 6:00 p.m. Déjala vacía si no importa la hora.</span></label>
         <label class="ancho">Mensaje para la tarjeta <span class="nota">Opcional — lo escribimos con mucho cariño</span><textarea name="mensaje" maxlength="400" placeholder="Feliz cumpleaños, mi amor…"></textarea></label>
-        <label>Forma de pago<select name="pago" required><option>Nequi</option><option>Transferencia bancaria</option><option>Efectivo</option></select></label>
+        <label>Forma de pago<select name="pago" required><option>Nequi o Daviplata</option><option>Transferencia bancaria</option><option>Efectivo</option></select></label>
         <label>Notas<input name="notas" placeholder="Colores, gustos, alergias…"></label>
         <div class="ancho resumen" id="resumen"></div>
         <p class="ancho error" id="errPedido" role="alert"></p>
@@ -382,7 +383,7 @@ function montarComunes() {
       <div class="pago-total" id="pagoTotal"></div>
       <div id="pagoDatos" class="pago-datos"></div>
       <ol class="pago-pasos" id="pagoPasos">
-        <li>Paga el total por Nequi o transferencia.</li>
+        <li>Paga el total por Nequi, Daviplata o transferencia.</li>
         <li>Toma una captura del comprobante.</li>
         <li>Pulsa el botón y adjunta la captura en WhatsApp 📎</li>
       </ol>
