@@ -245,6 +245,7 @@ function abrirPedido() {
     : `${ICO.tienda}<span>Te confirmamos por WhatsApp la dirección y la hora para recoger tu detalle.</span>`;
   $("#zonaDom").textContent = aj.zonaDomicilio ? aj.zonaDomicilio : "";
   $("#fFecha").min = hoyISO();
+  $("#fHora").oninput = () => { $("#fHora").setCustomValidity(""); $("#errPedido").textContent = ""; };
   const sub = Carrito.subtotal(), env = costoEnvio(aj);
   $("#resumen").innerHTML = Carrito.leer().map(i => `<div class="fila"><span>${i.cant} × ${esc(i.nombre)}${i.opcion ? " (" + esc(i.opcion) + ")" : ""}</span><span>${pesos(i.precio * i.cant)}</span></div>`).join("")
     + `<div class="fila" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--linea)"><span>${dom ? "Domicilio" : "Recoger en tienda"}</span><span>${dom ? pesos(env) : "Gratis"}</span></div>`
@@ -258,7 +259,9 @@ function cerrarPedido() { $("#modalPedido").classList.remove("abierto"); documen
 function enviarPedido(e) {
   e.preventDefault();
   const f = e.target, aj = _ajustes;
-  if (!f.reportValidity()) return;
+  const hora = f.elements.hora;
+  hora.setCustomValidity(hora.value && (hora.value < "08:00" || hora.value > "18:00") ? "Elige una hora entre 8:00 a.m. y 6:00 p.m." : "");
+  if (!f.reportValidity()) { if (!hora.validity.valid) $("#errPedido").textContent = "La hora de entrega debe ser entre 8:00 a.m. y 6:00 p.m."; return; }
   const v = n => (f.elements[n]?.value || "").trim();
   const dom = entrega === "domicilio";
   const l = Carrito.leer(), sub = Carrito.subtotal(), env = costoEnvio(aj);
@@ -363,7 +366,7 @@ function montarComunes() {
         <label class="solo-dom">Celular de quien recibe<input name="celDest" inputmode="tel" placeholder="Opcional"></label>
         <label class="ancho solo-dom" style="flex-direction:row;align-items:center;gap:10px;font-weight:400"><input type="checkbox" name="sorpresa" style="width:18px;height:18px;accent-color:var(--morado)"> Es una sorpresa (no avisar a quien recibe)</label>
         <label id="lblFecha">Fecha de entrega<input type="date" name="fecha" id="fFecha" required></label>
-        <label>Hora de entrega<input type="time" name="hora" id="fHora" min="08:00" max="18:00" step="900"><span class="nota">Entre 8:00 a.m. y 6:00 p.m. Déjala vacía si no importa la hora.</span></label>
+        <label>Hora de entrega<input type="time" name="hora" id="fHora" min="08:00" max="18:00" step="60"><span class="nota">Entre 8:00 a.m. y 6:00 p.m. Déjala vacía si no importa la hora.</span></label>
         <label class="ancho">Mensaje para la tarjeta <span class="nota">Opcional — lo escribimos con mucho cariño</span><textarea name="mensaje" maxlength="400" placeholder="Feliz cumpleaños, mi amor…"></textarea></label>
         <label>Forma de pago<select name="pago" required><option>Nequi o Daviplata</option><option>Transferencia bancaria</option><option>Efectivo</option></select></label>
         <label>Notas<input name="notas" placeholder="Colores, gustos, alergias…"></label>
